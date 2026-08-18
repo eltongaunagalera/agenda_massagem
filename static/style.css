@@ -1,0 +1,27 @@
+body {
+    background-color: #f8f9fa;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+.card {
+    border-radius: 12px;
+    border: none;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+}
+
+.slot-card {
+    transition: transform 0.2s;
+}
+
+.slot-card:hover {
+    transform: translateY(-2px);
+}
+
+.bg-livre {
+    border-left: 5px solid #198754;
+}
+
+.bg-ocupado {
+    border-left: 5px solid #dc3545;
+    background-color: #f8d7da33;
+}

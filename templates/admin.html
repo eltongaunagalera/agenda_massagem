@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Painel Admin - Massagem</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <!-- Menu Superior -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark mb-4">
+        <div class="container d-flex justify-content-between align-items-center">
+            <span class="navbar-brand">💆 Painel Admin - Massagista</span>
+            <div>
+                <a href="{{ url_for('alterar_senha') }}" class="btn btn-outline-light btn-sm me-2">🔑 Alterar Senha</a>
+                <a href="{{ url_for('logout') }}" class="btn btn-outline-light btn-sm">Sair</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container mb-5">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ category }}">{{ message }}</div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+        <div class="row">
+            <!-- Coluna Esquerda: Formulários -->
+            <div class="col-md-5 mb-4">
+                
+                <!-- Criar / Liberar Nova Lista -->
+                <div class="card p-4">
+                    <h5 class="mb-3">Criar / Liberar Nova Lista</h5>
+                    <form action="{{ url_for('admin_painel') }}" method="POST">
+                        <div class="mb-3">
+                            <label class="form-label">Data</label>
+                            <input type="date" name="data" class="form-control" required>
+                        </div>
+                        <div class="row">
+                            <div class="col mb-3">
+                                <label class="form-label">Início Trabalho</label>
+                                <input type="time" name="hora_inicio" value="09:00" class="form-control" required>
+                            </div>
+                            <div class="col mb-3">
+                                <label class="form-label">Fim Trabalho</label>
+                                <input type="time" name="hora_fim" value="16:00" class="form-control" required>
+                            </div>
+                        </div>
+
+                        <div class="form-check mb-3">
+                            <input type="checkbox" name="tem_almoco" class="form-check-input" id="checkAlmoco" checked onclick="toggleAlmoco()">
+                            <label class="form-check-label" for="checkAlmoco">Terá intervalo de almoço?</label>
+                        </div>
+
+                        <div id="divAlmoco" class="row mb-3">
+                            <div class="col">
+                                <label class="form-label">Início Almoço</label>
+                                <input type="time" name="inicio_almoco" value="12:00" class="form-control">
+                            </div>
+                            <div class="col">
+                                <label class="form-label">Fim Almoço</label>
+                                <input type="time" name="fim_almoco" value="13:00" class="form-control">
+                            </div>
+                        </div>
+
+                        <button type="submit" class="btn btn-primary w-100">Gerar Slots de 20 min</button>
+                    </form>
+                </div>
+
+                <!-- Redefinir Senha de Usuário -->
+                <div class="card p-4 mt-4">
+                    <h5 class="mb-3">🔑 Redefinir Senha de Usuário</h5>
+                    <form action="{{ url_for('resetar_senha_usuario') }}" method="POST">
+                        <div class="mb-3">
+                            <label class="form-label">Matrícula do Funcionário</label>
+                            <input type="text" name="matricula" class="form-control" style="text-transform: uppercase;" placeholder="Ex: MAT123" required>
+                            <div class="form-text">A senha será redefinida para o padrão: <strong>123456</strong></div>
+                        </div>
+                        <button type="submit" class="btn btn-warning w-100" onclick="return confirm('Confirma o reset da senha deste usuário para 123456?')">
+                            Resetar Senha para 123456
+                        </button>
+                    </form>
+                </div>
+
+            </div>
+
+            <!-- Coluna Direita: Gerenciamento e Listagem -->
+            <div class="col-md-7">
+                <div class="card p-4 mb-4">
+                    <h5>Gerenciar e Consultar Listas</h5>
+                    <form method="GET" action="{{ url_for('admin_painel') }}" class="row g-2 mb-3">
+                        <div class="col-auto">
+                            <select name="data" class="form-select" onchange="this.form.submit()">
+                                {% for d in datas %}
+                                    <option value="{{ d }}" {% if d == data_selecionada %}selected{% endif %}>
+                                        Data: {{ d }}
+                                    </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </form>
+
+                    {% if data_selecionada %}
+                        <div class="d-flex align-items-center mb-3">
+                            <span class="me-2 fw-bold">Status:</span>
+                            {% if status_lista == 'ativa' %}
+                                <span class="badge bg-success me-3">Ativa (Aberta para o público)</span>
+                                <form action="{{ url_for('finalizar_lista', data=data_selecionada) }}" method="POST" class="d-inline">
+                                    <button type="submit" class="btn btn-warning btn-sm" onclick="return confirm('Deseja realmente finalizar esta lista?')">
+                                        🔒 Finalizar Lista Agora
+                                    </button>
+                                </form>
+                            {% else %}
+                                <span class="badge bg-secondary">Finalizada / Arquivada</span>
+                            {% endif %}
+                        </div>
+
+                        <a href="{{ url_for('gerar_relatorio', data=data_selecionada) }}" target="_blank" class="btn btn-outline-primary btn-sm mb-3">
+                            🖨️ Imprimir / Gerar PDF
+                        </a>
+
+                        <!-- Lista de Horários -->
+                        <div class="mt-3">
+                            <h6>Horários da Lista:</h6>
+                            <ul class="list-group mb-3">
+                                {% for h in horarios %}
+                                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                                        <span>⏰ {{ h.horario_inicio }} às {{ h.horario_fim }}</span>
+                                        {% if h.usuario %}
+                                            <span class="badge bg-success">{{ h.usuario.nome }} ({{ h.usuario.matricula }})</span>
+                                        {% else %}
+                                            <span class="badge bg-secondary">LIVRE</span>
+                                        {% endif %}
+                                    </li>
+                                {% else %}
+                                    <li class="list-group-item text-muted">Nenhum horário cadastrado para esta data.</li>
+                                {% endfor %}
+                            </ul>
+                        </div>
+
+                        {% if texto_whatsapp %}
+                            <hr>
+                            <h6>Texto para o WhatsApp:</h6>
+                            <textarea class="form-control mb-2" rows="6" id="txtWhatsapp" readonly>{{ texto_whatsapp }}</textarea>
+                            <button class="btn btn-success btn-sm" onclick="copiarTexto()">📋 Copiar para WhatsApp</button>
+                        {% endif %}
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function toggleAlmoco() {
+            var check = document.getElementById("checkAlmoco");
+            var div = document.getElementById("divAlmoco");
+            div.style.display = check.checked ? "flex" : "none";
+        }
+
+        function copiarTexto() {
+            var copyText = document.getElementById("txtWhatsapp");
+            copyText.select();
+            document.execCommand("copy");
+            alert("Texto copiado! Agora basta colar no grupo do WhatsApp.");
+        }
+    </script>
+</body>
+</html>
