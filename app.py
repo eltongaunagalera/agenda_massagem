@@ -13,6 +13,16 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 db.init_app(app)
 
+# Garante a criação do banco de dados em ambiente de produção (ex: Render/Gunicorn)
+with app.app_context():
+    db.create_all()
+    admin = Usuario.query.filter_by(matricula='ADMIN').first()
+    if not admin:
+        admin_senha = generate_password_hash('admin123')
+        novo_admin = Usuario(nome='Massagista (Admin)', matricula='ADMIN', senha=admin_senha, is_admin=True)
+        db.session.add(novo_admin)
+        db.session.commit()
+
 login_manager = LoginManager()
 login_manager.login_view = 'login'
 login_manager.init_app(app)
